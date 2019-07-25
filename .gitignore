@@ -1,1 +1,5 @@
 tapcat
+bin
+tmp
+.vs
+*.user
