@@ -19,7 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\tap-windows.c" />
     <ClCompile Include="..\tapcat.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\tap-public.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

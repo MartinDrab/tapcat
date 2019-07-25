@@ -1,67 +1,27 @@
+#ifndef _WIN32
 #include <linux/if.h>
 #include <linux/if_tun.h>
-
+#endif
 #include <errno.h>
 #include <fcntl.h>
+#ifndef _WIN32
 #include <poll.h>
+#endif
 #include <stdio.h>
 #include <string.h>
+#ifndef _WIN32
 #include <sys/ioctl.h>
 #include <unistd.h>
+#endif
+#include "tap-public.h"
 
-#define TUN_DEV "/dev/net/tun"
 
-#define LEN(x) (sizeof x / sizeof * x)
-
-int
-all_write(int fd, const unsigned char * buf, int len) {
-	register int ret;
-
-	while (len) {
-		ret = write(fd, buf, len);
-		if (ret == -1) {
-			if (errno == EINTR) continue;
-			return ret;
-		}
-		buf += ret;
-		len -= ret;
-	}
-	return 0;
-}
-
-int
-open_tap_device(const char * dev) {
-	struct ifreq ifr;
-	int fd, err;
-
-	fd = open(TUN_DEV, O_RDWR | O_CLOEXEC);
-	if (fd < 0) {
-		perror("Cannot open " TUN_DEV);
-		return fd;
-	}
-
-	memset(&ifr, 0, sizeof ifr);
-
-	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
-	if (*dev) {
-		strncpy(ifr.ifr_name, dev, IFNAMSIZ);
-	}
-
-	if ((err = ioctl(fd, TUNSETIFF, &ifr)) < 0) {
-		perror("ioctl");
-		close(fd);
-		return err;
-	}
-
-	return fd;
-}
 
 int
 main(int argc, char * argv[]) {
 	const char * argv0, * name;
-	unsigned char buf[0x1000];
-	struct pollfd pfds[2];
-	int tap_fd, ret;
+	int tap_fd = -1;
+	int ret = 0;
 
 	argv0 = *argv; argv++; argc--;
 
@@ -72,21 +32,23 @@ main(int argc, char * argv[]) {
 
 	name = *argv; argv++; argc--;
 
-	tap_fd = open_tap_device(name);
-	if (tap_fd == -1) {
+	ret = open_tap(name, &tap_fd);
+	if (ret != 0) {
 		perror("cannot open tap");
-		return 1;
+		return ret;
 	}
 
 	if (*argv) {
-		dup2(tap_fd, 0);
-		dup2(tap_fd, 1);
-		ret = execvp(*argv, argv);
+		ret = execute_process(argc, argv, tap_fd);
 		if (ret == -1) {
 			perror("exec");
-			return 1;
+			return ret;
 		}
 	}
+
+#ifndef _WIN32
+	unsigned char buf[0x1000];
+	struct pollfd pfds[2];
 
 	memset(pfds, 0, sizeof pfds);
 
@@ -117,8 +79,9 @@ main(int argc, char * argv[]) {
 			break;
 		}
 	}
+#endif
 
-	close(tap_fd);
+	close_tap(tap_fd);
 
-	return 0;
+	return ret;
 }
