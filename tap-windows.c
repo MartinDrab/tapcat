@@ -197,7 +197,7 @@ execute_process(int argc, const char *argv[], int TAPHandle)
 		if (!SetHandleInformation(si.hStdInput, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
 		
-		if (ret == ERROR_SUCCESS && SetHandleInformation(si.hStdError, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdError, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
 		
 		if (ret == ERROR_SUCCESS && CreateProcessA(argv[0], cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
