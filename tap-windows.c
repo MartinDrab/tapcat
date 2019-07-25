@@ -148,6 +148,8 @@ create_cmdline(int argc, const char *argv[])
 int
 open_tap(const char *dev, int *device_handle)
 {
+	DWORD dummy = 0;
+	DWORD deviceStatus = 1;
 	char adapter[256];
 	char tapfile[512];
 	int status = ERROR_GEN_FAILURE;
@@ -158,9 +160,16 @@ open_tap(const char *dev, int *device_handle)
 	if (status == ERROR_SUCCESS) {
 		snprintf(tapfile, sizeof(tapfile), "%s%s.tap", TAP_DEVICE_SPACE, adapter);
 		fprintf(stderr, "Opening device %s\n", tapfile);
-		tmpDeviceHandle = CreateFileA(tapfile, GENERIC_WRITE | GENERIC_READ, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, NULL);
+		tmpDeviceHandle = CreateFileA(tapfile, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM, NULL);
 		if (tmpDeviceHandle != INVALID_HANDLE_VALUE) {
-			*device_handle = (int)tmpDeviceHandle;
+			if (!DeviceIoControl(tmpDeviceHandle, TAP_IOCTL_SET_MEDIA_STATUS, &deviceStatus, sizeof(deviceStatus), &deviceStatus, sizeof(deviceStatus), &dummy, NULL))
+				status = GetLastError();
+
+			if (status == ERROR_SUCCESS)
+				*device_handle = (int)tmpDeviceHandle;
+
+			if (status != ERROR_SUCCESS)
+				CloseHandle(tmpDeviceHandle);
 		} else status = GetLastError();
 	}
 
@@ -180,6 +189,7 @@ close_tap(int device_handle)
 int 
 execute_process(int argc, const char *argv[], int TAPHandle)
 {
+	DWORD exitCode = 0;
 	char *cmdLine = NULL;
 	int ret = ERROR_GEN_FAILURE;
 	STARTUPINFOA si;
@@ -199,11 +209,19 @@ execute_process(int argc, const char *argv[], int TAPHandle)
 		
 		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdError, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
-		
+
+		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdInput, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+			ret = GetLastError();
+
+		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdOutput, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+			ret = GetLastError();
+
 		if (ret == ERROR_SUCCESS && CreateProcessA(argv[0], cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-			close_tap(TAPHandle);
 			CloseHandle(pi.hThread);
 			WaitForSingleObject(pi.hProcess, INFINITE);
+			if (GetExitCodeProcess(pi.hProcess, &exitCode))
+				fprintf(stderr, "%s exitted with %u\n", argv[0], exitCode);
+
 			CloseHandle(pi.hProcess);
 		} else ret = GetLastError();
 	} else ret = ERROR_NOT_ENOUGH_MEMORY;
