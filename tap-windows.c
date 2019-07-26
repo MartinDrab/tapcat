@@ -200,27 +200,22 @@ execute_process(int argc, const char *argv[], int TAPHandle)
 	if (cmdLine != NULL) {
 		memset(&si, 0, sizeof(si));
 		si.cb = sizeof(si);
+/*
 		si.dwFlags = STARTF_USESTDHANDLES;
 		si.hStdInput = (HANDLE)TAPHandle;
 		si.hStdOutput = (HANDLE)TAPHandle;
 		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-		if (!SetHandleInformation(si.hStdInput, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+		if (!SetHandleInformation(TAPHandle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
 		
 		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdError, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
-
-		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdInput, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
-			ret = GetLastError();
-
-		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdOutput, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
-			ret = GetLastError();
-
+*/
 		if (ret == ERROR_SUCCESS && CreateProcessA(argv[0], cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
 			CloseHandle(pi.hThread);
-			WaitForSingleObject(pi.hProcess, INFINITE);
-			if (GetExitCodeProcess(pi.hProcess, &exitCode))
-				fprintf(stderr, "%s exitted with %u\n", argv[0], exitCode);
+//			WaitForSingleObject(pi.hProcess, INFINITE);
+//			if (GetExitCodeProcess(pi.hProcess, &exitCode))
+//				fprintf(stderr, "%s exitted with %u\n", argv[0], exitCode);
 
 			CloseHandle(pi.hProcess);
 		} else ret = GetLastError();
