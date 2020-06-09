@@ -35,7 +35,7 @@ static int _sock_init(const char *Host, const char *Service, SOCKET *Socket)
 	ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (ret == 0) {
 		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_UNSPEC;
+		hints.ai_family = AF_INET;
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_protocol = IPPROTO_TCP;
 		ret = getaddrinfo(Host, Service, &hints, &result);
@@ -105,12 +105,13 @@ main(int argc, char * argv[]) {
 	}
 
 	if (*argv) {
-//		ret = execute_process(argc, argv, tap_fd);
-//		if (ret == -1) {
-//			perror("exec");
-//			return ret;
-//		}
+		ret = execute_process(argc, argv, tap_fd);
+		if (ret == -1) {
+			perror("exec");
+			return ret;
+		}
 
+/*
 #ifdef _WIN32
 		ret = _sock_init("192.168.10.254", "1234", &anotherFD);
 		if (ret != 0) {
@@ -118,51 +119,9 @@ main(int argc, char * argv[]) {
 			return ret;
 		}
 #endif
+*/
 	}
 
-	char buf[0x1000];
-#ifdef _WIN32
-	WSAPOLLFD pfds[2];
-#else
-	struct pollfd pfds[2];
-#endif
-
-	memset(pfds, 0, sizeof pfds);
-
-	pfds[0].fd = anotherFD;
-	pfds[0].events = POLLIN;
-
-	pfds[1].fd = tap_fd;
-	pfds[1].events = POLLIN;
-
-	for (;;) {
-#ifdef _WIN32
-		ret = WSAPoll(pfds, 2, -1);
-#else
-		ret = poll(pfds, LEN(pfds), -1);
-#endif
-		if (ret < 0) {
-			ret = GetLastError();
-			fprintf(stderr, "poll: %u\n", ret);
-			break;
-		}
-
-		if (pfds[0].revents & POLLIN) {
-			ret = recv(pfds[0].fd, buf, sizeof buf, 0);
-			if (ret > 0)
-				send(pfds[1].fd, buf, ret, 0);
-		}
-
-		if (pfds[1].revents & POLLIN) {
-			ret = recv(pfds[1].fd, buf, sizeof buf, 0);
-			if (ret > 0)
-				send(pfds[0].fd, buf, ret, 0);
-		}
-
-		if (pfds[0].revents & POLLHUP || pfds[1].revents & POLLHUP) {
-			break;
-		}
-	}
 
 #ifdef _WIN32
 	_sock_finit(anotherFD);

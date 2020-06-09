@@ -162,8 +162,8 @@ open_tap(const char *dev, int *device_handle)
 		fprintf(stderr, "Opening device %s\n", tapfile);
 		tmpDeviceHandle = CreateFileA(tapfile, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM, NULL);
 		if (tmpDeviceHandle != INVALID_HANDLE_VALUE) {
-			if (!DeviceIoControl(tmpDeviceHandle, TAP_IOCTL_SET_MEDIA_STATUS, &deviceStatus, sizeof(deviceStatus), &deviceStatus, sizeof(deviceStatus), &dummy, NULL))
-				status = GetLastError();
+//			if (!DeviceIoControl(tmpDeviceHandle, TAP_IOCTL_SET_MEDIA_STATUS, &deviceStatus, sizeof(deviceStatus), &deviceStatus, sizeof(deviceStatus), &dummy, NULL))
+//				status = GetLastError();
 
 			if (status == ERROR_SUCCESS)
 				*device_handle = (int)tmpDeviceHandle;
@@ -200,22 +200,22 @@ execute_process(int argc, const char *argv[], int TAPHandle)
 	if (cmdLine != NULL) {
 		memset(&si, 0, sizeof(si));
 		si.cb = sizeof(si);
-/*
+
 		si.dwFlags = STARTF_USESTDHANDLES;
 		si.hStdInput = (HANDLE)TAPHandle;
 		si.hStdOutput = (HANDLE)TAPHandle;
 		si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-		if (!SetHandleInformation(TAPHandle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+		if (!SetHandleInformation((HANDLE)TAPHandle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
 		
 		if (ret == ERROR_SUCCESS && !SetHandleInformation(si.hStdError, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
 			ret = GetLastError();
-*/
+
 		if (ret == ERROR_SUCCESS && CreateProcessA(argv[0], cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
 			CloseHandle(pi.hThread);
-//			WaitForSingleObject(pi.hProcess, INFINITE);
-//			if (GetExitCodeProcess(pi.hProcess, &exitCode))
-//				fprintf(stderr, "%s exitted with %u\n", argv[0], exitCode);
+			WaitForSingleObject(pi.hProcess, INFINITE);
+			if (GetExitCodeProcess(pi.hProcess, &exitCode))
+				fprintf(stderr, "%s exitted with %u\n", argv[0], exitCode);
 
 			CloseHandle(pi.hProcess);
 		} else ret = GetLastError();
